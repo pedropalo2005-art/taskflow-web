@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow Pro - Tablero Kanban Web</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .kanban-col { min-height: calc(100vh - 160px); }
+    .drag-over { background-color: rgba(99, 102, 241, 0.08); border: 2px dashed #6366F1; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- ================= TOP HEADER BAR ================= -->
+  <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      
+      <!-- Brand & Subtitle -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-inner">
+          <i data-lucide="trello" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl font-bold tracking-tight">TaskFlow Pro</h1>
+            <span class="text-xs bg-indigo-500/60 text-indigo-100 px-2 py-0.5 rounded-full font-medium">Web PC & Móvil</span>
+          </div>
+          <p class="text-xs text-indigo-200">Tablero Kanban sincronizado con Supabase</p>
+        </div>
+      </div>
+
+      <!-- User PIN Profile & Quick Actions -->
+      <div class="flex items-center space-x-3">
+        <!-- Active PIN Pill (Click to change) -->
+        <button id="btnSwitchPin" class="flex items-center space-x-2 bg-indigo-800/80 hover:bg-indigo-900 px-3.5 py-1.5 rounded-lg border border-indigo-500/30 text-xs font-semibold transition" title="Cambiar usuario o PIN">
+          <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-300"></i>
+          <span>PIN: <strong id="lblActivePin" class="text-amber-300">1234</strong></span>
+          <span class="text-indigo-300 text-[10px] ml-1">(Cambiar)</span>
+        </button>
+
+        <!-- Voice Dictation Button (Mic) -->
+        <button id="btnWebMic" class="flex items-center space-x-1.5 bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition" title="Dictar tarea por voz">
+          <i data-lucide="mic" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Dictar</span>
+        </button>
+
+        <!-- New Task Button -->
+        <button id="btnOpenNewTaskModal" class="flex items-center space-x-1.5 bg-white text-indigo-700 hover:bg-indigo-50 px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-sm transition">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Nueva Tarea</span>
+        </button>
+
+        <!-- Manual Refresh -->
+        <button id="btnRefresh" class="p-2 text-indigo-200 hover:text-white hover:bg-indigo-600 rounded-lg transition" title="Recargar tareas">
+          <i data-lucide="rotate-cw" class="w-4 h-4" id="iconRefresh"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN KANBAN BOARD ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- COLUMNA 1: POR HACER -->
+      <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between pb-3 border-b-2 border-amber-400 mb-4">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+            <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">Por Hacer</h2>
+          </div>
+          <span id="badgeCountTodo" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="colTodo" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'todo')">
+          <!-- Cards insertadas dinámicamente -->
+        </div>
+      </div>
+
+      <!-- COLUMNA 2: EN CURSO -->
+      <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between pb-3 border-b-2 border-blue-500 mb-4">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></span>
+            <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">En Curso</h2>
+          </div>
+          <span id="badgeCountInProgress" class="bg-blue-100 text-blue-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="colInProgress" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'in_progress')">
+          <!-- Cards insertadas dinámicamente -->
+        </div>
+      </div>
+
+      <!-- COLUMNA 3: COMPLETADO -->
+      <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between pb-3 border-b-2 border-emerald-500 mb-4">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-emerald-600"></span>
+            <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">Hecho / Completado</h2>
+          </div>
+          <span id="badgeCountDone" class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
+        </div>
+        <div id="colDone" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'done')">
+          <!-- Cards insertadas dinámicamente -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ================= MODAL: NUEVA / EDITAR TAREA ================= -->
+  <div id="modalTask" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+        <h3 id="modalTitle" class="text-lg font-bold text-slate-800">Nueva Tarea Pendiente</h3>
+        <button id="btnModalMic" class="p-2 text-pink-600 hover:bg-pink-50 rounded-xl transition" title="Dictar por voz">
+          <i data-lucide="mic" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="formTask" class="space-y-4">
+        <input type="hidden" id="taskEditId">
+
+        <!-- Título -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Título de la tarea *</label>
+          <input type="text" id="inputTitle" required placeholder="Ej: Visitar tienda Blv. Morazán" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm font-medium">
+        </div>
+
+        <!-- Categoría -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Categoría</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="categoryGroup">
+            <label class="cursor-pointer">
+              <input type="radio" name="category" value="🏬 Visita Tienda" checked class="peer sr-only">
+              <div class="text-center py-2 px-3 text-xs font-semibold rounded-xl border border-slate-200 peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-800 transition">🏬 Visita Tienda</div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="category" value="📊 Reporte Pedidos" class="peer sr-only">
+              <div class="text-center py-2 px-3 text-xs font-semibold rounded-xl border border-slate-200 peer-checked:bg-sky-100 peer-checked:border-sky-500 peer-checked:text-sky-800 transition">📊 Reporte Pedidos</div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="category" value="💰 Ventas" class="peer sr-only">
+              <div class="text-center py-2 px-3 text-xs font-semibold rounded-xl border border-slate-200 peer-checked:bg-emerald-100 peer-checked:border-emerald-500 peer-checked:text-emerald-800 transition">💰 Ventas</div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="category" value="⚡ Urgente" class="peer sr-only">
+              <div class="text-center py-2 px-3 text-xs font-semibold rounded-xl border border-slate-200 peer-checked:bg-red-100 peer-checked:border-red-500 peer-checked:text-red-800 transition">⚡ Urgente</div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="category" value="📝 General" class="peer sr-only">
+              <div class="text-center py-2 px-3 text-xs font-semibold rounded-xl border border-slate-200 peer-checked:bg-slate-200 peer-checked:border-slate-500 peer-checked:text-slate-800 transition">📝 General</div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Fecha y Hora Recordatorio -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Fecha y Hora de Recordatorio (Opcional)</label>
+          <input type="datetime-local" id="inputDueDateTime" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm">
+        </div>
+
+        <!-- Notas / Descripción -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Notas o Detalles adicionales</label>
+          <textarea id="inputDescription" rows="3" placeholder="Detalles, indicaciones o números de contacto..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm"></textarea>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+          <button type="button" id="btnCancelModal" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-sm transition">Guardar Tarea</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CAMBIO / INGRESO DE PIN ================= -->
+  <div id="modalPin" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center">
+      
+      <div class="w-14 h-14 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="shield-check" class="w-8 h-8"></i>
+      </div>
+
+      <h3 class="text-xl font-bold text-slate-900 mb-1">Acceso a Tareas</h3>
+      <p class="text-xs text-slate-500 mb-5">Ingresa tu código PIN para ver tu tablero personal aislado. Si alguien más usa la app, tendrá su propio PIN.</p>
+
+      <form id="formPin" class="space-y-4">
+        <div>
+          <input type="number" id="inputPinNumber" maxlength="6" placeholder="Ej: 1234" required class="text-center tracking-widest text-2xl font-bold w-full py-3 px-4 rounded-xl border-2 border-indigo-200 focus:border-indigo-600 focus:outline-none">
+        </div>
+
+        <div class="flex items-center justify-center space-x-2 text-xs text-slate-500">
+          <span>PIN predeterminado:</span>
+          <button type="button" onclick="setQuickPin('1234')" class="font-bold text-indigo-600 hover:underline">1234 (Jefa)</button>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition">Entrar a mi Tablero</button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= NOTIFICACIÓN TOAST ================= -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none">
+    <span id="toastIcon">✨</span>
+    <span id="toastMsg">Mensaje</span>
+  </div>
+
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    // Configuración de Supabase
+    const SUPABASE_URL = "https://cdqdpnntmiirvhycufcp.supabase.co";
+    const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkcWRwbm50bWlpcnZoeWN1ZmNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1ODA2OTAsImV4cCI6MjExMDE1NjY5MH0.TfU_T25peO81chK6rGxjWltkgp2Od7oKwuqYNfL6dXs";
+
+    let currentPin = localStorage.getItem("taskflow_pin") || "1234";
+    let tasks = [];
+    let draggedTaskId = null;
+
+    // Elementos DOM
+    const lblActivePin = document.getElementById("lblActivePin");
+    const colTodo = document.getElementById("colTodo");
+    const colInProgress = document.getElementById("colInProgress");
+    const colDone = document.getElementById("colDone");
+    const badgeCountTodo = document.getElementById("badgeCountTodo");
+    const badgeCountInProgress = document.getElementById("badgeCountInProgress");
+    const badgeCountDone = document.getElementById("badgeCountDone");
+
+    const modalTask = document.getElementById("modalTask");
+    const formTask = document.getElementById("formTask");
+    const modalPin = document.getElementById("modalPin");
+    const formPin = document.getElementById("formPin");
+    const inputPinNumber = document.getElementById("inputPinNumber");
+
+    // Inicializar
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      updatePinUI();
+      fetchTasks();
+      setupVoiceRecognition();
+    });
+
+    function updatePinUI() {
+      lblActivePin.textContent = currentPin;
+    }
+
+    // Modal PIN
+    document.getElementById("btnSwitchPin").addEventListener("click", () => {
+      inputPinNumber.value = currentPin;
+      modalPin.classList.remove("hidden");
+    });
+
+    formPin.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const val = inputPinNumber.value.trim();
+      if (val) {
+        currentPin = val;
+        localStorage.setItem("taskflow_pin", currentPin);
+        updatePinUI();
+        modalPin.classList.add("hidden");
+        showToast("🔑 Cambiado a perfil PIN: " + currentPin);
+        fetchTasks();
+      }
+    });
+
+    function setQuickPin(pin) {
+      inputPinNumber.value = pin;
+    }
+
+    // Obtener tareas desde Supabase
+    async function fetchTasks() {
+      const refreshIcon = document.getElementById("iconRefresh");
+      refreshIcon.classList.add("animate-spin");
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/tasks?user_pin=eq.${currentPin}&order=created_at.desc`, {
+          headers: {
+            "apikey": ANON_KEY,
+            "Authorization": `Bearer ${ANON_KEY}`
+          }
+        });
+        if (res.ok) {
+          tasks = await res.json();
+          renderKanban();
+        } else {
+          showToast("❌ Error al conectar con Supabase");
+        }
+      } catch (err) {
+        showToast("⚠️ Modo sin conexión");
+      } finally {
+        refreshIcon.classList.remove("animate-spin");
+      }
+    }
+
+    // Renderizar Tablero Kanban con Estilos y Colores Distintivos
+    function renderKanban() {
+      colTodo.innerHTML = "";
+      colInProgress.innerHTML = "";
+      colDone.innerHTML = "";
+
+      let countTodo = 0;
+      let countInProgress = 0;
+      let countDone = 0;
+
+      tasks.forEach(task => {
+        const card = createCardElement(task);
+        if (task.status === "in_progress") {
+          colInProgress.appendChild(card);
+          countInProgress++;
+        } else if (task.status === "done") {
+          colDone.appendChild(card);
+          countDone++;
+        } else {
+          colTodo.appendChild(card);
+          countTodo++;
+        }
+      });
+
+      badgeCountTodo.textContent = countTodo;
+      badgeCountInProgress.textContent = countInProgress;
+      badgeCountDone.textContent = countDone;
+
+      // Estado vacío amigable
+      if (countTodo === 0) renderEmptyPlaceholder(colTodo, "Sin pendientes");
+      if (countInProgress === 0) renderEmptyPlaceholder(colInProgress, "Sin tareas en curso");
+      if (countDone === 0) renderEmptyPlaceholder(colDone, "Sin tareas completadas");
+
+      lucide.createIcons();
+    }
+
+    function renderEmptyPlaceholder(col, text) {
+      col.innerHTML = `
+        <div class="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-xs font-medium">
+          ${text}
+        </div>
+      `;
+    }
+
+    function createCardElement(task) {
+      const el = document.createElement("div");
+      el.className = "bg-white rounded-xl shadow-sm border p-4 cursor-grab hover:shadow-md transition relative group";
+      el.draggable = true;
+      el.dataset.id = task.id;
+
+      // Configuración de Colores y Botones según el Paso
+      let accentBorder = "border-amber-300";
+      let statusBadge = `<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md">📋 Por Hacer</span>`;
+      let actionBtn = `
+        <button onclick="advanceStatus('${task.id}', 'in_progress')" class="flex items-center space-x-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-lg font-bold transition">
+          <span>Comenzar</span>
+          <i data-lucide="arrow-right" class="w-3 h-3"></i>
+        </button>
+      `;
+
+      if (task.status === "in_progress") {
+        accentBorder = "border-blue-400 border-l-4";
+        statusBadge = `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-md">⏳ En Curso</span>`;
+        actionBtn = `
+          <button onclick="advanceStatus('${task.id}', 'done')" class="flex items-center space-x-1 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2.5 py-1 rounded-lg font-bold transition">
+            <span>Completar</span>
+            <i data-lucide="check" class="w-3 h-3"></i>
+          </button>
+        `;
+      } else if (task.status === "done") {
+        accentBorder = "border-emerald-400 border-l-4 opacity-85";
+        statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md">✅ Hecho</span>`;
+        actionBtn = `
+          <button onclick="advanceStatus('${task.id}', 'todo')" class="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg font-medium transition">
+            Reabrir ↩️
+          </button>
+        `;
+      } else {
+        accentBorder = "border-amber-300 border-l-4";
+      }
+
+      el.classList.add(accentBorder.split(" ")[0]);
+      if (accentBorder.includes("border-l-4")) el.classList.add("border-l-4");
+
+      // Categoría
+      const catClass = getCategoryBadgeClass(task.category);
+
+      // Fecha Formateada
+      let dueHtml = "";
+      if (task.due_timestamp) {
+        const d = new Date(Number(task.due_timestamp));
+        const formatted = d.toLocaleDateString("es-HN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        const isPast = task.due_timestamp < Date.now() && task.status !== "done";
+        dueHtml = `
+          <div class="flex items-center space-x-1 text-[11px] ${isPast ? 'text-red-600 font-bold' : 'text-slate-500'}">
+            <i data-lucide="clock" class="w-3 h-3"></i>
+            <span>${formatted}</span>
+          </div>
+        `;
+      }
+
+      el.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-1.5">
+            ${statusBadge}
+            <span class="${catClass} text-[10px] font-semibold px-2 py-0.5 rounded-md">${task.category || 'General'}</span>
+          </div>
+          ${dueHtml}
+        </div>
+
+        <h4 class="font-bold text-slate-900 text-sm mb-1 leading-snug">${escapeHtml(task.title)}</h4>
+        ${task.description ? `<p class="text-xs text-slate-600 mb-3 line-clamp-2">${escapeHtml(task.description)}</p>` : ''}
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100 mt-2">
+          <button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-red-600 p-1 rounded transition" title="Eliminar">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+          ${actionBtn}
+        </div>
+      `;
+
+      // Drag events
+      el.addEventListener("dragstart", () => {
+        draggedTaskId = task.id;
+        el.classList.add("opacity-50");
+      });
+      el.addEventListener("dragend", () => {
+        el.classList.remove("opacity-50");
+      });
+
+      return el;
+    }
+
+    function getCategoryBadgeClass(cat) {
+      if (!cat) return "bg-slate-100 text-slate-700";
+      if (cat.includes("Visita")) return "bg-purple-100 text-purple-700";
+      if (cat.includes("Reporte")) return "bg-sky-100 text-sky-700";
+      if (cat.includes("Venta")) return "bg-emerald-100 text-emerald-700";
+      if (cat.includes("Urgente")) return "bg-red-100 text-red-700 font-bold";
+      return "bg-slate-100 text-slate-700";
+    }
+
+    // Drag and Drop
+    function allowDrop(e) {
+      e.preventDefault();
+    }
+
+    async function handleDrop(e, newStatus) {
+      e.preventDefault();
+      if (!draggedTaskId) return;
+      await advanceStatus(draggedTaskId, newStatus);
+      draggedTaskId = null;
+    }
+
+    // Avanzar de Estado Kanban
+    async function advanceStatus(taskId, newStatus) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      task.status = newStatus;
+      renderKanban();
+
+      showToast(newStatus === "in_progress" ? "⏳ Tarea en curso" : newStatus === "done" ? "🎉 ¡Tarea completada!" : "📋 Tarea reabierta");
+
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${taskId}`, {
+          method: "PATCH",
+          headers: {
+            "apikey": ANON_KEY,
+            "Authorization": `Bearer ${ANON_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Eliminar Tarea
+    async function deleteTask(taskId) {
+      if (!confirm("¿Deseas eliminar esta tarea?")) return;
+      tasks = tasks.filter(t => t.id !== taskId);
+      renderKanban();
+      showToast("🗑️ Tarea eliminada");
+
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${taskId}`, {
+          method: "DELETE",
+          headers: {
+            "apikey": ANON_KEY,
+            "Authorization": `Bearer ${ANON_KEY}`
+          }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Modal Crear Tarea
+    document.getElementById("btnOpenNewTaskModal").addEventListener("click", () => {
+      formTask.reset();
+      document.getElementById("taskEditId").value = "";
+      document.getElementById("modalTitle").textContent = "Nueva Tarea Pendiente";
+      modalTask.classList.remove("hidden");
+    });
+
+    document.getElementById("btnCancelModal").addEventListener("click", () => {
+      modalTask.classList.add("hidden");
+    });
+
+    formTask.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById("inputTitle").value.trim();
+      const desc = document.getElementById("inputDescription").value.trim();
+      const catRadio = document.querySelector('input[name="category"]:checked');
+      const category = catRadio ? catRadio.value : "📝 General";
+      const dueInput = document.getElementById("inputDueDateTime").value;
+
+      let dueTimestamp = null;
+      if (dueInput) {
+        dueTimestamp = new Date(dueInput).getTime();
+      }
+
+      const newTask = {
+        id: crypto.randomUUID(),
+        title: title,
+        description: desc,
+        category: category,
+        status: "todo",
+        due_timestamp: dueTimestamp,
+        created_at: Date.now(),
+        user_pin: currentPin
+      };
+
+      tasks.unshift(newTask);
+      renderKanban();
+      modalTask.classList.add("hidden");
+      showToast("✨ Tarea creada exitosamente");
+
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+          method: "POST",
+          headers: {
+            "apikey": ANON_KEY,
+            "Authorization": `Bearer ${ANON_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(newTask)
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Dictado por Voz (Web Speech API)
+    function setupVoiceRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.log("Web Speech API no disponible en este navegador");
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = "es-HN";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        showToast("🎙️ Escuchando... Di tu tarea en voz alta");
+      };
+
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        if (!transcript) return;
+
+        // Abrir modal con el texto dictado
+        modalTask.classList.remove("hidden");
+        document.getElementById("inputTitle").value = transcript;
+        autoDetectCategory(transcript);
+        showToast("🗣️ Transcrito: " + transcript);
+      };
+
+      recognition.onerror = () => {
+        showToast("❌ No se pudo capturar el audio");
+      };
+
+      document.getElementById("btnWebMic").addEventListener("click", () => {
+        recognition.start();
+      });
+
+      document.getElementById("btnModalMic").addEventListener("click", () => {
+        recognition.start();
+      });
+    }
+
+    function autoDetectCategory(text) {
+      const lower = text.toLowerCase();
+      let selector = 'input[value="📝 General"]';
+      if (lower.includes("tienda") || lower.includes("visitar") || lower.includes("morazan") || lower.includes("sucursal")) {
+        selector = 'input[value="🏬 Visita Tienda"]';
+      } else if (lower.includes("reporte") || lower.includes("pedido") || lower.includes("pedidos ya")) {
+        selector = 'input[value="📊 Reporte Pedidos"]';
+      } else if (lower.includes("venta") || lower.includes("cierre") || lower.includes("caja")) {
+        selector = 'input[value="💰 Ventas"]';
+      } else if (lower.includes("urgente") || lower.includes("ya") || lower.includes("inmediato")) {
+        selector = 'input[value="⚡ Urgente"]';
+      }
+      const radio = document.querySelector(selector);
+      if (radio) radio.checked = true;
+    }
+
+    // Toast de notificaciones
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toastMsg").textContent = msg;
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 3000);
+    }
+
+    document.getElementById("btnRefresh").addEventListener("click", () => {
+      fetchTasks();
+    });
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>
