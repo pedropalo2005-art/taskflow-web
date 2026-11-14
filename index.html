@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TaskFlow Pro - Tablero Kanban Web</title>
+  <title>TaskFlow Pro - Acceso Seguro</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts: Inter -->
@@ -14,112 +14,175 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
-    .kanban-col { min-height: calc(100vh - 160px); }
+    .kanban-col { min-height: calc(100vh - 180px); }
     .drag-over { background-color: rgba(99, 102, 241, 0.08); border: 2px dashed #6366F1; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
 
-  <!-- ================= TOP HEADER BAR ================= -->
-  <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+  <!-- ================= 1. PANTALLA DE BLOQUEO / LOGIN CON PIN ================= -->
+  <div id="screenLock" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden">
       
-      <!-- Brand & Subtitle -->
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-inner">
-          <i data-lucide="trello" class="w-6 h-6 text-white"></i>
-        </div>
+      <!-- Fondo decorativo sutil -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Icono y Logo -->
+      <div class="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-600/30">
+        <i data-lucide="lock" class="w-8 h-8"></i>
+      </div>
+
+      <h2 class="text-2xl font-extrabold text-white tracking-tight">TaskFlow Pro</h2>
+      <p class="text-xs text-slate-400 mt-1 mb-6">Ingresa tu PIN personal para desbloquear tu tablero</p>
+
+      <form id="formLoginPin" class="space-y-5">
+        <!-- Campo de PIN -->
         <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-xl font-bold tracking-tight">TaskFlow Pro</h1>
-            <span class="text-xs bg-indigo-500/60 text-indigo-100 px-2 py-0.5 rounded-full font-medium">Web PC & Móvil</span>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">PIN de Acceso</label>
+          <div class="relative">
+            <input 
+              type="password" 
+              id="inputAuthPin" 
+              maxlength="8" 
+              placeholder="••••" 
+              required 
+              autofocus
+              class="w-full text-center text-3xl tracking-widest font-bold py-3.5 px-4 bg-slate-900/90 border-2 border-slate-700 text-white rounded-2xl focus:border-indigo-500 focus:outline-none transition shadow-inner">
+            <button 
+              type="button" 
+              id="btnTogglePinVisibility" 
+              class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition">
+              <i data-lucide="eye" class="w-5 h-5" id="iconEye"></i>
+            </button>
           </div>
-          <p class="text-xs text-indigo-200">Tablero Kanban sincronizado con Supabase</p>
         </div>
-      </div>
 
-      <!-- User PIN Profile & Quick Actions -->
-      <div class="flex items-center space-x-3">
-        <!-- Active PIN Pill (Click to change) -->
-        <button id="btnSwitchPin" class="flex items-center space-x-2 bg-indigo-800/80 hover:bg-indigo-900 px-3.5 py-1.5 rounded-lg border border-indigo-500/30 text-xs font-semibold transition" title="Cambiar usuario o PIN">
-          <i data-lucide="lock" class="w-3.5 h-3.5 text-amber-300"></i>
-          <span>PIN: <strong id="lblActivePin" class="text-amber-300">1234</strong></span>
-          <span class="text-indigo-300 text-[10px] ml-1">(Cambiar)</span>
+        <!-- Opción Recordar Sesión -->
+        <div class="flex items-center justify-center space-x-2 text-xs text-slate-400">
+          <input type="checkbox" id="chkRememberPin" checked class="w-4 h-4 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-900">
+          <label for="chkRememberPin" class="cursor-pointer select-none">Recordar en esta computadora</label>
+        </div>
+
+        <!-- Botón de Entrada -->
+        <button 
+          type="submit" 
+          class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 transition transform active:scale-[0.98]">
+          Desbloquear Tablero
         </button>
 
-        <!-- Voice Dictation Button (Mic) -->
-        <button id="btnWebMic" class="flex items-center space-x-1.5 bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition" title="Dictar tarea por voz">
-          <i data-lucide="mic" class="w-4 h-4"></i>
-          <span class="hidden sm:inline">Dictar</span>
-        </button>
-
-        <!-- New Task Button -->
-        <button id="btnOpenNewTaskModal" class="flex items-center space-x-1.5 bg-white text-indigo-700 hover:bg-indigo-50 px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-sm transition">
-          <i data-lucide="plus-circle" class="w-4 h-4"></i>
-          <span>Nueva Tarea</span>
-        </button>
-
-        <!-- Manual Refresh -->
-        <button id="btnRefresh" class="p-2 text-indigo-200 hover:text-white hover:bg-indigo-600 rounded-lg transition" title="Recargar tareas">
-          <i data-lucide="rotate-cw" class="w-4 h-4" id="iconRefresh"></i>
-        </button>
-      </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed pt-2">
+          💡 Cada PIN tiene un tablero completamente privado y aislado. Si compartes la web, cada usuario entra con su propio PIN.
+        </p>
+      </form>
 
     </div>
-  </header>
+  </div>
 
-  <!-- ================= MAIN KANBAN BOARD ================= -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-      <!-- COLUMNA 1: POR HACER -->
-      <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
-        <div class="flex items-center justify-between pb-3 border-b-2 border-amber-400 mb-4">
-          <div class="flex items-center space-x-2">
-            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-            <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">Por Hacer</h2>
+  <!-- ================= 2. TABLERO PRINCIPAL (OCULTO HASTA LOGIN) ================= -->
+  <div id="mainApp" class="hidden flex-col min-h-screen">
+    
+    <!-- Header Superior -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+        
+        <!-- Marca y Subtítulo -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-inner">
+            <i data-lucide="trello" class="w-6 h-6 text-white"></i>
           </div>
-          <span id="badgeCountTodo" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
-        </div>
-        <div id="colTodo" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'todo')">
-          <!-- Cards insertadas dinámicamente -->
-        </div>
-      </div>
-
-      <!-- COLUMNA 2: EN CURSO -->
-      <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
-        <div class="flex items-center justify-between pb-3 border-b-2 border-blue-500 mb-4">
-          <div class="flex items-center space-x-2">
-            <span class="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></span>
-            <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">En Curso</h2>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-xl font-bold tracking-tight">TaskFlow Pro</h1>
+              <span class="text-xs bg-indigo-500/60 text-indigo-100 px-2 py-0.5 rounded-full font-medium">Sesión Activa</span>
+            </div>
+            <p class="text-xs text-indigo-200">Sincronizado en tiempo real con Supabase</p>
           </div>
-          <span id="badgeCountInProgress" class="bg-blue-100 text-blue-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
         </div>
-        <div id="colInProgress" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'in_progress')">
-          <!-- Cards insertadas dinámicamente -->
-        </div>
-      </div>
 
-      <!-- COLUMNA 3: COMPLETADO -->
-      <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
-        <div class="flex items-center justify-between pb-3 border-b-2 border-emerald-500 mb-4">
-          <div class="flex items-center space-x-2">
-            <span class="w-3 h-3 rounded-full bg-emerald-600"></span>
-            <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">Hecho / Completado</h2>
+        <!-- Acciones de Usuario -->
+        <div class="flex items-center space-x-2.5">
+          <!-- PIN Activo -->
+          <div class="flex items-center space-x-1.5 bg-indigo-800/90 px-3 py-1.5 rounded-xl border border-indigo-500/30 text-xs font-semibold text-amber-300">
+            <i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-300"></i>
+            <span>PIN: <strong id="lblActivePin">1234</strong></span>
           </div>
-          <span id="badgeCountDone" class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
-        </div>
-        <div id="colDone" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'done')">
-          <!-- Cards insertadas dinámicamente -->
-        </div>
-      </div>
 
-    </div>
-  </main>
+          <!-- Dictado por Voz -->
+          <button id="btnWebMic" class="flex items-center space-x-1.5 bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition" title="Dictar tarea por voz">
+            <i data-lucide="mic" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Dictar</span>
+          </button>
+
+          <!-- Nueva Tarea -->
+          <button id="btnOpenNewTaskModal" class="flex items-center space-x-1.5 bg-white text-indigo-700 hover:bg-indigo-50 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-sm transition">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Nueva Tarea</span>
+          </button>
+
+          <!-- Recargar -->
+          <button id="btnRefresh" class="p-2 text-indigo-200 hover:text-white hover:bg-indigo-600 rounded-xl transition" title="Recargar">
+            <i data-lucide="rotate-cw" class="w-4 h-4" id="iconRefresh"></i>
+          </button>
+
+          <!-- Cerrar Sesión / Bloquear -->
+          <button id="btnLogout" class="flex items-center space-x-1 text-xs bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl font-bold transition ml-1" title="Bloquear y salir">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Bloquear</span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Tablero Kanban -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- COLUMNA 1: POR HACER -->
+        <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center justify-between pb-3 border-b-2 border-amber-400 mb-4">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">Por Hacer</h2>
+            </div>
+            <span id="badgeCountTodo" class="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
+          </div>
+          <div id="colTodo" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'todo')"></div>
+        </div>
+
+        <!-- COLUMNA 2: EN CURSO -->
+        <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center justify-between pb-3 border-b-2 border-blue-500 mb-4">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-blue-600 animate-pulse"></span>
+              <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">En Curso</h2>
+            </div>
+            <span id="badgeCountInProgress" class="bg-blue-100 text-blue-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
+          </div>
+          <div id="colInProgress" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'in_progress')"></div>
+        </div>
+
+        <!-- COLUMNA 3: COMPLETADO -->
+        <div class="flex flex-col bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center justify-between pb-3 border-b-2 border-emerald-500 mb-4">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-600"></span>
+              <h2 class="font-bold text-slate-800 text-sm tracking-wide uppercase">Hecho / Completado</h2>
+            </div>
+            <span id="badgeCountDone" class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">0</span>
+          </div>
+          <div id="colDone" class="kanban-col space-y-3 flex-1 transition" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'done')"></div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
 
   <!-- ================= MODAL: NUEVA / EDITAR TAREA ================= -->
   <div id="modalTask" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100">
       
       <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
         <h3 id="modalTitle" class="text-lg font-bold text-slate-800">Nueva Tarea Pendiente</h3>
@@ -129,8 +192,6 @@
       </div>
 
       <form id="formTask" class="space-y-4">
-        <input type="hidden" id="taskEditId">
-
         <!-- Título -->
         <div>
           <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Título de la tarea *</label>
@@ -140,7 +201,7 @@
         <!-- Categoría -->
         <div>
           <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Categoría</label>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="categoryGroup">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <label class="cursor-pointer">
               <input type="radio" name="category" value="🏬 Visita Tienda" checked class="peer sr-only">
               <div class="text-center py-2 px-3 text-xs font-semibold rounded-xl border border-slate-200 peer-checked:bg-purple-100 peer-checked:border-purple-500 peer-checked:text-purple-800 transition">🏬 Visita Tienda</div>
@@ -173,7 +234,7 @@
         <!-- Notas / Descripción -->
         <div>
           <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Notas o Detalles adicionales</label>
-          <textarea id="inputDescription" rows="3" placeholder="Detalles, indicaciones o números de contacto..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm"></textarea>
+          <textarea id="inputDescription" rows="3" placeholder="Detalles, indicaciones o notas..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm"></textarea>
         </div>
 
         <!-- Botones de Acción -->
@@ -186,51 +247,29 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: CAMBIO / INGRESO DE PIN ================= -->
-  <div id="modalPin" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center">
-      
-      <div class="w-14 h-14 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-        <i data-lucide="shield-check" class="w-8 h-8"></i>
-      </div>
-
-      <h3 class="text-xl font-bold text-slate-900 mb-1">Acceso a Tareas</h3>
-      <p class="text-xs text-slate-500 mb-5">Ingresa tu código PIN para ver tu tablero personal aislado. Si alguien más usa la app, tendrá su propio PIN.</p>
-
-      <form id="formPin" class="space-y-4">
-        <div>
-          <input type="number" id="inputPinNumber" maxlength="6" placeholder="Ej: 1234" required class="text-center tracking-widest text-2xl font-bold w-full py-3 px-4 rounded-xl border-2 border-indigo-200 focus:border-indigo-600 focus:outline-none">
-        </div>
-
-        <div class="flex items-center justify-center space-x-2 text-xs text-slate-500">
-          <span>PIN predeterminado:</span>
-          <button type="button" onclick="setQuickPin('1234')" class="font-bold text-indigo-600 hover:underline">1234 (Jefa)</button>
-        </div>
-
-        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition">Entrar a mi Tablero</button>
-      </form>
-
-    </div>
-  </div>
-
-  <!-- ================= NOTIFICACIÓN TOAST ================= -->
-  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none">
-    <span id="toastIcon">✨</span>
-    <span id="toastMsg">Mensaje</span>
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none">
+    <span id="toastMsg">Notificación</span>
   </div>
 
   <!-- ================= JAVASCRIPT ================= -->
   <script>
-    // Configuración de Supabase
     const SUPABASE_URL = "https://cdqdpnntmiirvhycufcp.supabase.co";
     const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkcWRwbm50bWlpcnZoeWN1ZmNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1ODA2OTAsImV4cCI6MjExMDE1NjY5MH0.TfU_T25peO81chK6rGxjWltkgp2Od7oKwuqYNfL6dXs";
 
-    let currentPin = localStorage.getItem("taskflow_pin") || "1234";
+    let currentPin = null;
     let tasks = [];
     let draggedTaskId = null;
 
     // Elementos DOM
+    const screenLock = document.getElementById("screenLock");
+    const mainApp = document.getElementById("mainApp");
+    const formLoginPin = document.getElementById("formLoginPin");
+    const inputAuthPin = document.getElementById("inputAuthPin");
+    const chkRememberPin = document.getElementById("chkRememberPin");
+    const btnLogout = document.getElementById("btnLogout");
     const lblActivePin = document.getElementById("lblActivePin");
+
     const colTodo = document.getElementById("colTodo");
     const colInProgress = document.getElementById("colInProgress");
     const colDone = document.getElementById("colDone");
@@ -240,47 +279,85 @@
 
     const modalTask = document.getElementById("modalTask");
     const formTask = document.getElementById("formTask");
-    const modalPin = document.getElementById("modalPin");
-    const formPin = document.getElementById("formPin");
-    const inputPinNumber = document.getElementById("inputPinNumber");
 
-    // Inicializar
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
-      updatePinUI();
-      fetchTasks();
+      checkAuth();
       setupVoiceRecognition();
+      setupPinToggle();
     });
 
-    function updatePinUI() {
-      lblActivePin.textContent = currentPin;
+    // Control de Autenticación
+    function checkAuth() {
+      const savedPin = localStorage.getItem("taskflow_saved_pin");
+      if (savedPin) {
+        unlockApp(savedPin);
+      } else {
+        lockApp();
+      }
     }
 
-    // Modal PIN
-    document.getElementById("btnSwitchPin").addEventListener("click", () => {
-      inputPinNumber.value = currentPin;
-      modalPin.classList.remove("hidden");
-    });
+    function lockApp() {
+      currentPin = null;
+      mainApp.classList.add("hidden");
+      mainApp.classList.remove("flex");
+      screenLock.classList.remove("hidden");
+      inputAuthPin.value = "";
+      inputAuthPin.focus();
+      lucide.createIcons();
+    }
 
-    formPin.addEventListener("submit", (e) => {
+    function unlockApp(pin) {
+      currentPin = pin.trim();
+      lblActivePin.textContent = currentPin;
+
+      if (chkRememberPin.checked) {
+        localStorage.setItem("taskflow_saved_pin", currentPin);
+      } else {
+        localStorage.removeItem("taskflow_saved_pin");
+      }
+
+      screenLock.classList.add("hidden");
+      mainApp.classList.remove("hidden");
+      mainApp.classList.add("flex");
+      lucide.createIcons();
+
+      fetchTasks();
+    }
+
+    formLoginPin.addEventListener("submit", (e) => {
       e.preventDefault();
-      const val = inputPinNumber.value.trim();
-      if (val) {
-        currentPin = val;
-        localStorage.setItem("taskflow_pin", currentPin);
-        updatePinUI();
-        modalPin.classList.add("hidden");
-        showToast("🔑 Cambiado a perfil PIN: " + currentPin);
-        fetchTasks();
+      const enteredPin = inputAuthPin.value.trim();
+      if (enteredPin) {
+        unlockApp(enteredPin);
       }
     });
 
-    function setQuickPin(pin) {
-      inputPinNumber.value = pin;
+    btnLogout.addEventListener("click", () => {
+      localStorage.removeItem("taskflow_saved_pin");
+      lockApp();
+      showToast("🔒 Sesión bloqueada");
+    });
+
+    function setupPinToggle() {
+      const btn = document.getElementById("btnTogglePinVisibility");
+      const icon = document.getElementById("iconEye");
+      btn.addEventListener("click", () => {
+        if (inputAuthPin.type === "password") {
+          inputAuthPin.type = "text";
+          icon.setAttribute("data-lucide", "eye-off");
+        } else {
+          inputAuthPin.type = "password";
+          icon.setAttribute("data-lucide", "eye");
+        }
+        lucide.createIcons();
+      });
     }
 
-    // Obtener tareas desde Supabase
+    // Consulta de Tareas en Supabase filtradas estrictamente por el PIN autenticado
     async function fetchTasks() {
+      if (!currentPin) return;
+
       const refreshIcon = document.getElementById("iconRefresh");
       refreshIcon.classList.add("animate-spin");
 
@@ -295,7 +372,7 @@
           tasks = await res.json();
           renderKanban();
         } else {
-          showToast("❌ Error al conectar con Supabase");
+          showToast("❌ Error al cargar tareas");
         }
       } catch (err) {
         showToast("⚠️ Modo sin conexión");
@@ -304,7 +381,7 @@
       }
     }
 
-    // Renderizar Tablero Kanban con Estilos y Colores Distintivos
+    // Render del Tablero Kanban con Estilos de Color por Paso
     function renderKanban() {
       colTodo.innerHTML = "";
       colInProgress.innerHTML = "";
@@ -332,7 +409,6 @@
       badgeCountInProgress.textContent = countInProgress;
       badgeCountDone.textContent = countDone;
 
-      // Estado vacío amigable
       if (countTodo === 0) renderEmptyPlaceholder(colTodo, "Sin pendientes");
       if (countInProgress === 0) renderEmptyPlaceholder(colInProgress, "Sin tareas en curso");
       if (countDone === 0) renderEmptyPlaceholder(colDone, "Sin tareas completadas");
@@ -342,7 +418,7 @@
 
     function renderEmptyPlaceholder(col, text) {
       col.innerHTML = `
-        <div class="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-xs font-medium">
+        <div class="h-32 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 text-xs font-medium">
           ${text}
         </div>
       `;
@@ -350,15 +426,14 @@
 
     function createCardElement(task) {
       const el = document.createElement("div");
-      el.className = "bg-white rounded-xl shadow-sm border p-4 cursor-grab hover:shadow-md transition relative group";
+      el.className = "bg-white rounded-2xl shadow-sm border p-4 cursor-grab hover:shadow-md transition relative group";
       el.draggable = true;
       el.dataset.id = task.id;
 
-      // Configuración de Colores y Botones según el Paso
-      let accentBorder = "border-amber-300";
+      let accentBorder = "border-amber-300 border-l-4";
       let statusBadge = `<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md">📋 Por Hacer</span>`;
       let actionBtn = `
-        <button onclick="advanceStatus('${task.id}', 'in_progress')" class="flex items-center space-x-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-lg font-bold transition">
+        <button onclick="advanceStatus('${task.id}', 'in_progress')" class="flex items-center space-x-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-xl font-bold transition">
           <span>Comenzar</span>
           <i data-lucide="arrow-right" class="w-3 h-3"></i>
         </button>
@@ -368,30 +443,26 @@
         accentBorder = "border-blue-400 border-l-4";
         statusBadge = `<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-md">⏳ En Curso</span>`;
         actionBtn = `
-          <button onclick="advanceStatus('${task.id}', 'done')" class="flex items-center space-x-1 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2.5 py-1 rounded-lg font-bold transition">
+          <button onclick="advanceStatus('${task.id}', 'done')" class="flex items-center space-x-1 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2.5 py-1 rounded-xl font-bold transition">
             <span>Completar</span>
             <i data-lucide="check" class="w-3 h-3"></i>
           </button>
         `;
       } else if (task.status === "done") {
-        accentBorder = "border-emerald-400 border-l-4 opacity-85";
+        accentBorder = "border-emerald-400 border-l-4 opacity-80";
         statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md">✅ Hecho</span>`;
         actionBtn = `
-          <button onclick="advanceStatus('${task.id}', 'todo')" class="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg font-medium transition">
+          <button onclick="advanceStatus('${task.id}', 'todo')" class="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-xl font-medium transition">
             Reabrir ↩️
           </button>
         `;
-      } else {
-        accentBorder = "border-amber-300 border-l-4";
       }
 
       el.classList.add(accentBorder.split(" ")[0]);
       if (accentBorder.includes("border-l-4")) el.classList.add("border-l-4");
 
-      // Categoría
       const catClass = getCategoryBadgeClass(task.category);
 
-      // Fecha Formateada
       let dueHtml = "";
       if (task.due_timestamp) {
         const d = new Date(Number(task.due_timestamp));
@@ -425,7 +496,6 @@
         </div>
       `;
 
-      // Drag events
       el.addEventListener("dragstart", () => {
         draggedTaskId = task.id;
         el.classList.add("opacity-50");
@@ -446,10 +516,7 @@
       return "bg-slate-100 text-slate-700";
     }
 
-    // Drag and Drop
-    function allowDrop(e) {
-      e.preventDefault();
-    }
+    function allowDrop(e) { e.preventDefault(); }
 
     async function handleDrop(e, newStatus) {
       e.preventDefault();
@@ -458,7 +525,6 @@
       draggedTaskId = null;
     }
 
-    // Avanzar de Estado Kanban
     async function advanceStatus(taskId, newStatus) {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
@@ -478,12 +544,9 @@
           },
           body: JSON.stringify({ status: newStatus })
         });
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) { console.error(e); }
     }
 
-    // Eliminar Tarea
     async function deleteTask(taskId) {
       if (!confirm("¿Deseas eliminar esta tarea?")) return;
       tasks = tasks.filter(t => t.id !== taskId);
@@ -498,16 +561,11 @@
             "Authorization": `Bearer ${ANON_KEY}`
           }
         });
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) { console.error(e); }
     }
 
-    // Modal Crear Tarea
     document.getElementById("btnOpenNewTaskModal").addEventListener("click", () => {
       formTask.reset();
-      document.getElementById("taskEditId").value = "";
-      document.getElementById("modalTitle").textContent = "Nueva Tarea Pendiente";
       modalTask.classList.remove("hidden");
     });
 
@@ -517,7 +575,6 @@
 
     formTask.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const title = document.getElementById("inputTitle").value.trim();
       const desc = document.getElementById("inputDescription").value.trim();
       const catRadio = document.querySelector('input[name="category"]:checked');
@@ -543,7 +600,7 @@
       tasks.unshift(newTask);
       renderKanban();
       modalTask.classList.add("hidden");
-      showToast("✨ Tarea creada exitosamente");
+      showToast("✨ Tarea creada");
 
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
@@ -555,81 +612,40 @@
           },
           body: JSON.stringify(newTask)
         });
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     });
 
-    // Dictado por Voz (Web Speech API)
     function setupVoiceRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        console.log("Web Speech API no disponible en este navegador");
-        return;
-      }
+      if (!SpeechRecognition) return;
 
       const recognition = new SpeechRecognition();
       recognition.lang = "es-HN";
       recognition.continuous = false;
       recognition.interimResults = false;
 
-      recognition.onstart = () => {
-        showToast("🎙️ Escuchando... Di tu tarea en voz alta");
-      };
-
+      recognition.onstart = () => showToast("🎙️ Escuchando... Di tu tarea");
       recognition.onresult = (e) => {
         const transcript = e.results[0][0].transcript;
         if (!transcript) return;
-
-        // Abrir modal con el texto dictado
         modalTask.classList.remove("hidden");
         document.getElementById("inputTitle").value = transcript;
-        autoDetectCategory(transcript);
-        showToast("🗣️ Transcrito: " + transcript);
+        showToast("🗣️ " + transcript);
       };
+      recognition.onerror = () => showToast("❌ Audio no reconocido");
 
-      recognition.onerror = () => {
-        showToast("❌ No se pudo capturar el audio");
-      };
-
-      document.getElementById("btnWebMic").addEventListener("click", () => {
-        recognition.start();
-      });
-
-      document.getElementById("btnModalMic").addEventListener("click", () => {
-        recognition.start();
-      });
+      document.getElementById("btnWebMic").addEventListener("click", () => recognition.start());
+      document.getElementById("btnModalMic").addEventListener("click", () => recognition.start());
     }
 
-    function autoDetectCategory(text) {
-      const lower = text.toLowerCase();
-      let selector = 'input[value="📝 General"]';
-      if (lower.includes("tienda") || lower.includes("visitar") || lower.includes("morazan") || lower.includes("sucursal")) {
-        selector = 'input[value="🏬 Visita Tienda"]';
-      } else if (lower.includes("reporte") || lower.includes("pedido") || lower.includes("pedidos ya")) {
-        selector = 'input[value="📊 Reporte Pedidos"]';
-      } else if (lower.includes("venta") || lower.includes("cierre") || lower.includes("caja")) {
-        selector = 'input[value="💰 Ventas"]';
-      } else if (lower.includes("urgente") || lower.includes("ya") || lower.includes("inmediato")) {
-        selector = 'input[value="⚡ Urgente"]';
-      }
-      const radio = document.querySelector(selector);
-      if (radio) radio.checked = true;
-    }
-
-    // Toast de notificaciones
     function showToast(msg) {
       const toast = document.getElementById("toast");
       document.getElementById("toastMsg").textContent = msg;
       toast.classList.remove("translate-y-20", "opacity-0");
-      setTimeout(() => {
-        toast.classList.add("translate-y-20", "opacity-0");
-      }, 3000);
+      setTimeout(() => toast.classList.add("translate-y-20", "opacity-0"), 3000);
     }
 
-    document.getElementById("btnRefresh").addEventListener("click", () => {
-      fetchTasks();
-    });
+    document.getElementById("btnRefresh").addEventListener("click", () => fetchTasks());
 
     function escapeHtml(str) {
       if (!str) return '';
